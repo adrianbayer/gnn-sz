@@ -255,12 +255,12 @@ class ModelGNN(torch.nn.Module):
                 lay = PointNetLayer(in_channels, hidden_channels, latent_channels)
 
             elif use_model=="EdgeNet":
+                print('EL', in_channels, hidden_channels, latent_channels)
                 lay = EdgeLayer(in_channels, hidden_channels, latent_channels)
                 #lay = EdgeConv(Sequential(Linear(2*in_channels, hidden_channels),ReLU(),Linear(hidden_channels, hidden_channels),ReLU(),Linear(hidden_channels, latent_channels)))  # Using the pytorch-geometric implementation, same result
 
             elif use_model=="EdgePoint":
                 lay = EdgePointLayer(in_channels, hidden_channels, latent_channels)
-
             elif use_model=="MetaNet":
                 if use_model=="MetaNet" and i==2:   in_channels = 610
                 #lay = MetaLayer(node_model=NodeModel(in_channels, hidden_channels, latent_channels), global_model=GlobalModel(in_channels, hidden_channels, latent_channels))
@@ -276,14 +276,15 @@ class ModelGNN(torch.nn.Module):
 
         self.layers = ModuleList(layers)
 
-        lin_in = latent_channels*3+2
-        if use_model=="MetaNet":    lin_in = (in_channels +latent_channels*3 +2)*3 + 2
+        lin_in = latent_channels*3+1    #changed +2 to +1, I think this is the numebr of global params. Also why latent*3? It happens than hidden=latent*3 for default, but is this what we want in general? I think it's based on below fwd which has pooled = add+mean+max + u (so 3*latent + 1)
+        if use_model=="MetaNet":    lin_in = (in_channels +latent_channels*3 +1)*3 + 1
         if use_model=="MetaNet" and n_layers==3:    lin_in = 2738
+        print('lin', lin_in, latent_channels)
         self.lin = Sequential(Linear(lin_in, latent_channels),
                               ReLU(),
                               Linear(latent_channels, latent_channels),
                               ReLU(),
-                              Linear(latent_channels, 2))
+                              Linear(latent_channels,2))
 
         self.k_nn = k_nn
         self.pooled = 0.
@@ -299,7 +300,9 @@ class ModelGNN(torch.nn.Module):
         # Get edges using positions by computing the kNNs or the neighbors within a radius
         #edge_index = knn_graph(pos, k=self.k_nn, batch=batch, loop=self.loop)
         edge_index = radius_graph(pos, r=self.k_nn, batch=batch, loop=self.loop)
-
+        print('fwd: x.shape', x.shape, 'ei.shape', edge_index.shape)
+        print('min max pos', torch.min(pos), torch.max(pos))
+        print(self.layers)
         # Start message passing
         for layer in self.layers:
             if self.namemodel=="DeepSet":
@@ -315,11 +318,15 @@ class ModelGNN(torch.nn.Module):
 
 
         # Mix different global pooling layers
+        # pooling gets things down into one number (per trainining dataset)
+        # this is wanted if yoiu want to learna  global property, like total mass
+        # of all subhalos (i.e. halo mass)
+        # but we want a node property, so don't want this
         addpool = global_add_pool(x, batch) # [num_examples, hidden_channels]
         meanpool = global_mean_pool(x, batch)
         maxpool = global_max_pool(x, batch)
         #self.pooled = torch.cat([addpool, meanpool, maxpool], dim=1)
         self.pooled = torch.cat([addpool, meanpool, maxpool, u], dim=1)
-
+        print('pooled', self.pooled, self.pooled.shape, batch, batch.shape)
         # Final linear layer
         return self.lin(self.pooled)

@@ -24,16 +24,20 @@ def train(loader, model, optimizer):
     model.train()
 
     loss_tot = 0
+    print('loader', loader)
     for data in loader:  # Iterate in batches over the training dataset.
-
+        print('data', data)
         # Rotate randomly for data augmentation
-        rotmat = Rot.random().as_matrix()
-        data.pos = torch.tensor([rotmat.dot(p) for p in data.pos], dtype=torch.float32)
-        data.x[:,:3] = torch.tensor([rotmat.dot(p) for p in data.x[:,:3]], dtype=torch.float32)
+        #rotmat = Rot.random().as_matrix()
+        #data.pos = torch.tensor([rotmat.dot(p) for p in data.pos], dtype=torch.float32)
+        #data.x[:,:3] = torch.tensor([rotmat.dot(p) for p in data.x[:,:3]], dtype=torch.float32)
+        #data.x = torch.tensor([rotmat.dot(p) for p in data.x], dtype=torch.float32)          # x means this will be x,y for now don't know how to rotate 2d position?? how to augment? maybe need to rotate in 3d then take xy? FIXME
 
         data.to(device)
         optimizer.zero_grad()  # Clear gradients.
         out = model(data)  # Perform a single forward pass.
+        print('out', out, out.shape)
+        print('data.y', data.y, data.y.shape)
         y_out, err_out = out[:,0], out[:,1]     # Take mean and standard deviation of the output
 
         # Compute loss as sum of two terms for likelihood-free inference

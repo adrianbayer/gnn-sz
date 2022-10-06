@@ -26,7 +26,7 @@ simpathroot = "/projects/QUIJOTE/CAMELS/Sims/"
 boxsize = 25.e3
 
 # Validation and test size
-valid_size, test_size = 0.15, 0.15
+valid_size, test_size = 0.2, 0.2
 
 # Batch size
 batch_size = 128

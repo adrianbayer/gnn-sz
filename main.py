@@ -23,7 +23,7 @@ def main(params, verbose = True, testsuite = False):
 
     # Split dataset among training, validation and testing datasets
     train_loader, valid_loader, test_loader = split_datasets(dataset)
-
+    print('train_loader', train_loader)
     # Initialize model
     model = ModelGNN(use_model, node_features, n_layers, k_nn)
     model.to(device)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
             os.mkdir(path)
 
     # Load default parameters
-    from Hyperparameters.params_TNG_CV import params
+    from Hyperparameters.params_Quijote import params
 
     main(params)
 
